@@ -52,3 +52,11 @@ bin/
 application-local.yml
 application-local.properties
 
+# Kubernetes secrets holding real credentials.
+# Commit only the *.example.yaml templates.
+k8s/**/secret.yaml
+
+# Downloaded tool archives (helm, kubectl, ...)
+*.tar.gz
+*.tgz
+*.zip

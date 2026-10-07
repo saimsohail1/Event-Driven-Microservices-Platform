@@ -5,6 +5,4 @@ metadata:
 data:
   DB_URL: "jdbc:postgresql://payment-service-db.cf8m4sau03a9.eu-west-1.rds.amazonaws.com:5432/payments"
   DB_USER: "postgres"
-  KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
-
-
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"

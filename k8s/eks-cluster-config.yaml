@@ -17,9 +17,12 @@ vpc:
 managedNodeGroups:
   - name: standard-workers
     instanceType: t3.medium
-    desiredCapacity: 1
-    minSize: 1
-    maxSize: 2
+    # A single t3.medium (2 vCPU) cannot hold Kafka, ZooKeeper, the frontend and
+    # two replicas of all three services once CPU requests are counted, so the
+    # group starts at two nodes.
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 4
     volumeSize: 20
     labels:
       role: worker

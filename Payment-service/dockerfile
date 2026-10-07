@@ -5,6 +5,11 @@ WORKDIR /app
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} app.jar
 
-EXPOSE 8082
+# Run as an unprivileged user; matches runAsUser in the Kubernetes manifests.
+RUN useradd --system --uid 1001 --gid root appuser
+USER 1001
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+EXPOSE 8083
+
+# Without this the JVM sizes its heap from the host, not the container limit.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

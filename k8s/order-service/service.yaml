@@ -1,3 +1,5 @@
+# ClusterIP, not LoadBalancer: the frontend pod reverse-proxies /api/orders, so
+# this service does not need its own public ELB.
 apiVersion: v1
 kind: Service
 metadata:
@@ -5,7 +7,7 @@ metadata:
   labels:
     app: order-service
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 80
     targetPort: 8081
@@ -13,4 +15,3 @@ spec:
     name: http
   selector:
     app: order-service
-

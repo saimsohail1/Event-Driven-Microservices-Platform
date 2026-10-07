@@ -1,5 +1,7 @@
 package org.inventoryservice.controller;
 
+import jakarta.validation.Valid;
+import org.inventoryservice.dto.UpsertInventoryItemRequest;
 import org.inventoryservice.entity.InventoryItem;
 import org.inventoryservice.service.InventoryService;
 import org.springframework.http.ResponseEntity;
@@ -9,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/inventory")
-@CrossOrigin(origins = "*")
 public class InventoryController {
 
     private final InventoryService service;
@@ -28,8 +29,13 @@ public class InventoryController {
         return ResponseEntity.ok(service.getByProductId(productId));
     }
 
+    @PutMapping
+    public ResponseEntity<InventoryItem> upsertInventoryItem(@Valid @RequestBody UpsertInventoryItemRequest request) {
+        return ResponseEntity.ok(service.upsertInventoryItem(request));
+    }
+
     @PostMapping
-    public ResponseEntity<InventoryItem> createInventoryItem(@RequestBody InventoryItem item) {
-        return ResponseEntity.ok(service.createInventoryItem(item));
+    public ResponseEntity<InventoryItem> createInventoryItem(@Valid @RequestBody UpsertInventoryItemRequest request) {
+        return ResponseEntity.ok(service.upsertInventoryItem(request));
     }
 }

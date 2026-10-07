@@ -1,8 +1,10 @@
 package org.orderservice.controller;
 
+import jakarta.validation.Valid;
 import org.orderservice.dto.CreateOrderRequest;
 import org.orderservice.entity.Orders;
 import org.orderservice.service.OrderService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin(origins = "*")
 public class OrderController {
 
     private final OrderService service;
@@ -20,8 +21,8 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Orders> createOrder(@RequestBody CreateOrderRequest request) {
-        return ResponseEntity.ok(service.createOrder(request));
+    public ResponseEntity<Orders> createOrder(@Valid @RequestBody CreateOrderRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createOrder(request));
     }
 
     @GetMapping
@@ -29,5 +30,3 @@ public class OrderController {
         return ResponseEntity.ok(service.getAll());
     }
 }
-
-

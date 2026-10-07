@@ -1,0 +1,40 @@
+# Rendered at container start by the nginx image's envsubst entrypoint, so the
+# same image works in docker-compose and in Kubernetes with different upstream
+# addresses. Nothing environment-specific is baked into the build.
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "no-referrer" always;
+
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    # The browser talks only to this origin, so the APIs need no CORS headers.
+    location /api/orders {
+        proxy_pass ${ORDER_SERVICE_URL};
+        include /etc/nginx/proxy-common.conf;
+    }
+
+    location /api/inventory {
+        proxy_pass ${INVENTORY_SERVICE_URL};
+        include /etc/nginx/proxy-common.conf;
+    }
+
+    location /api/payments {
+        proxy_pass ${PAYMENT_SERVICE_URL};
+        include /etc/nginx/proxy-common.conf;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

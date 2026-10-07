@@ -1,13 +1,16 @@
 package org.paymentservice.event;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderCreatedEvent {
-
     private UUID orderId;
     private String productId;
     private int quantity;
-    private double price;
+    private BigDecimal price;
 
     // getters & setters
 
@@ -35,12 +38,11 @@ public class OrderCreatedEvent {
         this.quantity = quantity;
     }
 
-    public double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 }
-

@@ -5,8 +5,21 @@ on:
     paths:
       - "Inventory-service/**"
       - "k8s/inventory-service/**"
+      - ".github/workflows/inventory-service-ci-cd.yaml"
     branches:
       - main
+  pull_request:
+    paths:
+      - "Inventory-service/**"
+      - "k8s/inventory-service/**"
+      - ".github/workflows/inventory-service-ci-cd.yaml"
+
+concurrency:
+  group: inventory-service-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build-and-deploy:
@@ -28,12 +41,15 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+          cache: maven
 
-      - name: Build inventory-service
+      # Tests are the point of CI; a failure here must stop the deploy.
+      - name: Build and test inventory-service
         working-directory: Inventory-service
-        run: mvn clean package -DskipTests
+        run: mvn -B clean verify
 
       - name: Configure AWS credentials
+        if: github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -41,47 +57,39 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
+        if: github.event_name == 'push'
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image
+        if: github.event_name == 'push'
         working-directory: Inventory-service
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           LATEST_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
-          
-          echo "Building Docker image..."
-          echo "Image URI: $IMAGE_URI"
-          echo "Latest URI: $LATEST_URI"
-          
+
+          echo "Building $IMAGE_URI"
           docker build -t $IMAGE_URI -t $LATEST_URI .
-          
-          echo "Pushing image with tag: ${{ env.IMAGE_TAG }}"
+
           docker push $IMAGE_URI
-          
-          echo "Pushing image with tag: latest"
           docker push $LATEST_URI
-          
+
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-          echo "LATEST_URI=$LATEST_URI" >> $GITHUB_ENV
 
-      - name: Update Kubernetes deployment
+      - name: Deploy to EKS
+        if: github.event_name == 'push'
         run: |
-          echo "Configuring kubectl for EKS cluster..."
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
-          
-          echo "Updating deployment image to: ${{ env.IMAGE_URI }}"
-          kubectl set image deployment/inventory-service \
-            inventory-service=${{ env.IMAGE_URI }} \
-            -n default || kubectl set image deployment/inventory-service \
-            inventory-service=${{ env.IMAGE_URI }}
-          
-          echo "Waiting for rollout to complete..."
-          kubectl rollout status deployment/inventory-service --timeout=300s || \
-          kubectl rollout status deployment/inventory-service -n default --timeout=300s
-          
-          echo "Deployment updated successfully!"
-          kubectl get pods -l app=inventory-service
 
+          # Apply the manifests as well as the image: config changes in
+          # k8s/inventory-service/ also trigger this workflow, and "set image"
+          # alone would silently ignore them.
+          kubectl apply -f k8s/inventory-service/configmap.yaml
+          kubectl apply -f k8s/inventory-service/service.yaml
+          kubectl apply -f k8s/inventory-service/deployment.yaml
+
+          kubectl set image deployment/inventory-service inventory-service=${{ env.IMAGE_URI }}
+          kubectl rollout status deployment/inventory-service --timeout=300s
+          kubectl get pods -l app=inventory-service

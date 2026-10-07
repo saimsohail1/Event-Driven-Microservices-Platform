@@ -6,24 +6,63 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/orders}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:1234}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
   jpa:
+    # Schema is owned by Flyway; Hibernate must never alter it.
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: none
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
+      # Outbox rows already hold serialized JSON, so the payload ships as-is.
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
       properties:
-        spring.json.add.type.headers: false
-        # Timeout configuration to prevent hanging when Kafka is unavailable
-        request.timeout.ms: 5000
-        delivery.timeout.ms: 5000
-        max.block.ms: 1000
-        metadata.max.age.ms: 5000
-        connections.max.idle.ms: 5000
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        request.timeout.ms: 15000
+        delivery.timeout.ms: 30000
+        max.block.ms: 10000
 
+app:
+  kafka:
+    topics:
+      order-created: order.created
+      partitions: 3
+      replicas: 1
+  outbox:
+    poll-interval-ms: 1000
+    # Let the app finish starting before the first poll touches Kafka.
+    initial-delay-ms: 5000
+    batch-size: 100
+    max-attempts: 10
+    send-timeout-ms: 15000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+      group:
+        # Liveness must not depend on the database: a transient DB outage
+        # should not cause Kubernetes to restart otherwise-healthy pods.
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+
+logging:
+  level:
+    org.orderservice: INFO

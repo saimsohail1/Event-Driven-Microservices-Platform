@@ -3,7 +3,6 @@ kind: ConfigMap
 metadata:
   name: inventory-service-config
 data:
-  DB_URL: "jdbc:postgresql://$(aws rds describe-db-instances --db-instance-identifier inventory-service-db --region eu-west-1 --query 'DBInstances[0].Endpoint.Address' --output text):5432/inventory"
+  DB_URL: "jdbc:postgresql://inventory-service-db.cf8m4sau03a9.eu-west-1.rds.amazonaws.com:5432/inventory"
   DB_USER: "postgres"
-  KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
-
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"

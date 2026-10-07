@@ -6,17 +6,60 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/inventory}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:1234}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
   jpa:
+    # Schema is owned by Flyway; Hibernate must never alter it.
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
+    open-in-view: false
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      # Order Service owns and creates order.created. Starting before it exists
+      # must not kill this service; the container retries until the topic shows up.
+      missing-topics-fatal: false
     consumer:
       group-id: inventory-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # ErrorHandlingDeserializer keeps a malformed message from permanently
+      # stalling the partition; it is routed to the dead-letter topic instead.
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
-        spring.json.trusted.packages: "*"
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: org.inventoryservice.event
         spring.json.value.default.type: org.inventoryservice.event.OrderCreatedEvent
+        spring.json.use.type.headers: false
+
+app:
+  kafka:
+    topics:
+      order-created: order.created
+    retry:
+      interval-ms: 2000
+      max-attempts: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+      group:
+        # Liveness must not depend on the database: a transient DB outage
+        # should not cause Kubernetes to restart otherwise-healthy pods.
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+
+logging:
+  level:
+    org.inventoryservice: INFO

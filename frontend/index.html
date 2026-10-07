@@ -15,9 +15,9 @@
 
         <!-- Navigation Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('orders')">📦 Orders</button>
-            <button class="tab-btn" onclick="showTab('inventory')">📊 Inventory</button>
-            <button class="tab-btn" onclick="showTab('payments')">💳 Payments</button>
+            <button class="tab-btn active" onclick="showTab('orders', event)">📦 Orders</button>
+            <button class="tab-btn" onclick="showTab('inventory', event)">📊 Inventory</button>
+            <button class="tab-btn" onclick="showTab('payments', event)">💳 Payments</button>
         </div>
 
         <!-- Orders Tab -->
@@ -62,7 +62,7 @@
                     </thead>
                     <tbody id="inventory-tbody">
                         <tr>
-                            <td colspan="3" class="loading">Loading inventory...</td>
+                            <td colspan="2" class="loading">Loading inventory...</td>
                         </tr>
                     </tbody>
                 </table>

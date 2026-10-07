@@ -1,0 +1,91 @@
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - "k8s/frontend/**"
+      - ".github/workflows/frontend-ci-cd.yaml"
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "k8s/frontend/**"
+      - ".github/workflows/frontend-ci-cd.yaml"
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: eu-west-1
+      AWS_ACCOUNT_ID: 905418111634
+      ECR_REPOSITORY: springboot-kafka-microservices/frontend
+      CLUSTER_NAME: microservices-cluster
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build image and verify nginx config
+        working-directory: frontend
+        run: |
+          docker build -t frontend-ci-check .
+          # Render the template the way the entrypoint does, then let nginx
+          # validate the result so a broken proxy block fails here.
+          # nginx resolves proxy_pass hostnames at config-load time, so the
+          # check uses literal addresses rather than cluster service names.
+          docker run --rm \
+            -e ORDER_SERVICE_URL=http://127.0.0.1:8081 \
+            -e INVENTORY_SERVICE_URL=http://127.0.0.1:8082 \
+            -e PAYMENT_SERVICE_URL=http://127.0.0.1:8083 \
+            frontend-ci-check nginx -t
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        if: github.event_name == 'push'
+        working-directory: frontend
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          LATEST_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+
+          echo "Building $IMAGE_URI"
+          docker build -t $IMAGE_URI -t $LATEST_URI .
+
+          docker push $IMAGE_URI
+          docker push $LATEST_URI
+
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+      - name: Deploy to EKS
+        if: github.event_name == 'push'
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+
+          kubectl apply -f k8s/frontend/service.yaml
+          kubectl apply -f k8s/frontend/deployment.yaml
+
+          kubectl set image deployment/frontend frontend=${{ env.IMAGE_URI }}
+          kubectl rollout status deployment/frontend --timeout=300s
+          kubectl get pods -l app=frontend

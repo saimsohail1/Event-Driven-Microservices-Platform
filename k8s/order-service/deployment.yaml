@@ -16,12 +16,19 @@ spec:
     spec:
       imagePullSecrets:
       - name: ecr-registry-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
       containers:
       - name: order-service
         image: 905418111634.dkr.ecr.eu-west-1.amazonaws.com/springboot-kafka-microservices/order-service:latest
         ports:
         - containerPort: 8081
           name: http
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         env:
         - name: DB_URL
           valueFrom:
@@ -45,22 +52,28 @@ spec:
               key: KAFKA_BOOTSTRAP_SERVERS
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "320Mi"
+            cpu: "150m"
           limits:
             memory: "512Mi"
             cpu: "500m"
-        livenessProbe:
+        # The startup probe absorbs JVM + Flyway boot time, so liveness and
+        # readiness can react quickly once the app is up.
+        startupProbe:
           httpGet:
-            path: /api/orders
+            path: /actuator/health/readiness
             port: 8081
-          initialDelaySeconds: 60
-          periodSeconds: 10
-          failureThreshold: 5
+          periodSeconds: 5
+          failureThreshold: 30
         readinessProbe:
           httpGet:
-            path: /api/orders
+            path: /actuator/health/readiness
             port: 8081
-          initialDelaySeconds: 30
           periodSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          periodSeconds: 10
           failureThreshold: 3

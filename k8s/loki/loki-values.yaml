@@ -1,33 +1,20 @@
+# Values for the grafana/loki-stack chart.
 loki:
-
-   enabled: true
-
-   isDefault: true
-
-   service:
-
-     port: 3100
-
-persistence:
-
+  enabled: true
+  isDefault: true
+  service:
+    port: 3100
+  persistence:
     enabled: false
-
     size: 10Gi
+  # For a simple single-node / demo EKS cluster. Raise when running HA.
+  replicas: 1
 
-   # For simple single-node / demo EKS. Remove if you run HA mode later.
-
-   replicas: 1
- 
 promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
 
-   enabled: true
-
-   config:
-
-     clients:
-
-       - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
- 
 grafana:
-
-   enabled: false
+  enabled: false

@@ -1,6 +1,9 @@
 package org.orderservice.entity;
 
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -11,9 +14,24 @@ public class Orders {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false)
     private String productId;
+
+    @Column(nullable = false)
     private int quantity;
-    private double price;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
+
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
 
     // getters & setters
 
@@ -37,13 +55,15 @@ public class Orders {
         this.quantity = quantity;
     }
 
-    public double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }
-
-

@@ -159,8 +159,12 @@
                 <configuration>
                     <failBuildOnCVSS>11</failBuildOnCVSS>
                     <formats>HTML,JSON</formats>
-                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
-                    <ossIndexAnalyzerEnabled>false</ossIndexAnalyzerEnabled>
+                    <!-- Never pass an empty nvdApiKey: GitHub sets the env
+                         var to blank when the secret is missing, and NVD
+                         then 403s in a few seconds. CI supplies a real key
+                         via nvdApiKeyEnvironmentVariable when present. -->
+                    <ossIndexAnalyzerEnabled>true</ossIndexAnalyzerEnabled>
+                    <ossIndexWarnOnlyOnRemoteErrors>true</ossIndexWarnOnlyOnRemoteErrors>
                 </configuration>
                 <executions>
                     <execution>

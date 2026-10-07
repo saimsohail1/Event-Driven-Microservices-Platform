@@ -167,6 +167,8 @@ See [CHANGELOG.md](CHANGELOG.md).
 ```bash
 mvn -B verify
 # SBOM: target/bom.json
-# CVE report (slow; downloads the NVD):
-mvn -B verify -Ddependency-check.skip=false
+# CVE report (skipped unless you pass this). Needs an NVD API key for a
+# full NIST download; without one it still writes a report via OSS Index:
+NVD_API_KEY=... mvn -B verify -Ddependency-check.skip=false -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+mvn -B org.owasp:dependency-check-maven:check -Ddependency-check.skip=false -DautoUpdate=false -DfailOnError=false
 ```

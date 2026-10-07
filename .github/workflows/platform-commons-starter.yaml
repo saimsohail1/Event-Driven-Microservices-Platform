@@ -56,9 +56,8 @@ jobs:
       # NVD_API_KEY must not be sent (NVD 403s it). No key still works; it
       # just waits longer between pages. Cache the data dir so later runs
       # are incremental.
-      - name: Cache NVD database
-        uses: actions/cache@v4
-        # Restored across runs so the first keyed download is the expensive one.
+      - name: Restore NVD database
+        uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
           key: dependency-check-data-${{ runner.os }}
@@ -67,7 +66,7 @@ jobs:
 
       - name: OWASP dependency-check
         working-directory: platform-commons-starter
-        timeout-minutes: 40
+        timeout-minutes: 90
         env:
           # Do not map this onto NVD_API_KEY. An empty env var is treated as
           # an invalid key and the download dies in seconds.
@@ -84,6 +83,13 @@ jobs:
             echo "No NVD API key; downloading without one (slow, public rate limit)"
           fi
           mvn -B org.owasp:dependency-check-maven:check $ARGS
+
+      - name: Save NVD database
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-data-${{ runner.os }}-${{ github.run_id }}
 
       - name: Upload dependency-check report
         if: always()

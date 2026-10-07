@@ -58,6 +58,7 @@ jobs:
       # are incremental.
       - name: Cache NVD database
         uses: actions/cache@v4
+        # Restored across runs so the first keyed download is the expensive one.
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
           key: dependency-check-data-${{ runner.os }}

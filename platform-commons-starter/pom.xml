@@ -17,12 +17,13 @@
     <artifactId>platform-commons-starter</artifactId>
     <version>1.0.0</version>
     <name>platform-commons-starter</name>
-    <description>Shared web, logging and HTTP client conventions for the platform services</description>
+    <description>Shared web, observability, HTTP client and Kafka conventions for the platform services</description>
 
     <properties>
         <java.version>21</java.version>
-        <!-- Not managed by the Spring Boot BOM, so it has to be pinned here. -->
+        <!-- Not managed by the Spring Boot BOM, so these have to be pinned here. -->
         <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
     </properties>
 
     <dependencies>
@@ -45,6 +46,36 @@
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
             <version>${logstash-logback-encoder.version}</version>
+        </dependency>
+
+        <!-- Health indicators and the Micrometer API. The platform mandates
+             observability, so this is not optional. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Actuator ships Micrometer core but no registry, so no service
+             could actually be scraped without this. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Retry policy for the shared RestClient. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-retry</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Optional: only services that already use Kafka get the Kafka
+             defaults and health indicator. Every auto-configuration that
+             touches Kafka is guarded with @ConditionalOnClass. -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Generates META-INF/spring-configuration-metadata.json so the

@@ -1,6 +1,7 @@
 name: Platform Commons Starter
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "platform-commons-starter/**"

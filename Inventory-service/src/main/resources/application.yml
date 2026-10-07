@@ -2,6 +2,8 @@ server:
   port: 8082
 
 spring:
+  application:
+    name: inventory-service
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/inventory}
     username: ${DB_USER:postgres}
@@ -38,15 +40,23 @@ app:
   kafka:
     topics:
       order-created: order.created
-    retry:
-      interval-ms: 2000
+
+platform:
+  metrics:
+    environment: ${PLATFORM_ENV:local}
+  kafka:
+    consumer:
       max-attempts: 3
+      backoff: 2s
+      non-retryable-exceptions:
+        - org.inventoryservice.exception.UnknownProductException
+        - org.inventoryservice.exception.InsufficientStockException
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       probes:

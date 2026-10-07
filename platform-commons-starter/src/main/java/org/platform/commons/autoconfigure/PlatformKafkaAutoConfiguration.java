@@ -3,6 +3,7 @@ package org.platform.commons.autoconfigure;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.platform.commons.PlatformProperties;
+import org.platform.commons.kafka.DeadLetterProducer;
 import org.platform.commons.kafka.DeadLetterTopicResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,18 +79,22 @@ public class PlatformKafkaAutoConfiguration {
      * A byte[] template, so a record that failed because it could not be
      * deserialized can still be forwarded verbatim.
      * <p>
+     * Wrapped in {@link DeadLetterProducer} so it does not count as a
+     * {@link KafkaTemplate} bean. Boot would otherwise skip the service's
+     * own producer template.
+     * <p>
      * Only the broker list is carried over from {@code spring.kafka}. A
      * service talking to a TLS or SASL cluster should define its own bean.
      */
     @Bean
-    @ConditionalOnMissingBean(name = "deadLetterKafkaTemplate")
-    public KafkaTemplate<byte[], byte[]> deadLetterKafkaTemplate(KafkaProperties kafkaProperties) {
+    @ConditionalOnMissingBean(DeadLetterProducer.class)
+    public DeadLetterProducer deadLetterProducer(KafkaProperties kafkaProperties) {
         Map<String, Object> configs = new HashMap<>();
         configs.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
         configs.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
         configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
         configs.put(ProducerConfig.ACKS_CONFIG, "all");
-        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(configs));
+        return new DeadLetterProducer(new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(configs)));
     }
 
     /**
@@ -99,13 +104,13 @@ public class PlatformKafkaAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(CommonErrorHandler.class)
-    public DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<byte[], byte[]> deadLetterKafkaTemplate,
+    public DefaultErrorHandler kafkaErrorHandler(DeadLetterProducer deadLetterProducer,
                                                  PlatformProperties properties) {
 
         PlatformProperties.KafkaConsumer consumer = properties.getKafka().getConsumer();
 
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
-                deadLetterKafkaTemplate, new DeadLetterTopicResolver(consumer.getDeadLetterSuffix()));
+                deadLetterProducer.template(), new DeadLetterTopicResolver(consumer.getDeadLetterSuffix()));
 
         // maxAttempts counts deliveries, so one plus this many retries.
         FixedBackOff backOff = new FixedBackOff(consumer.getBackoff().toMillis(),

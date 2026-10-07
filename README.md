@@ -8,6 +8,7 @@ This project implements an event-driven microservices architecture using Spring 
 - **Inventory Service** (Port 8082): Consumes order events and reserves stock
 - **Payment Service** (Port 8083): Consumes order events and records payments
 - **Frontend** (Port 8080): Static dashboard; nginx reverse-proxies `/api/*` to the services
+- **platform-commons-starter**: shared Spring Boot library (correlation IDs, error body, RestClient retry + metrics, Kafka DLT + health). See [platform-commons-starter/README.md](platform-commons-starter/README.md).
 
 The browser only ever talks to the frontend origin, so the services need no
 public endpoints and no CORS configuration.
@@ -72,10 +73,26 @@ which is the default in each `application.yml`.
 
 ### Building and testing
 
+The three services depend on `platform-commons-starter`. From the repo root
+the reactor builds the starter first:
+
 ```bash
-cd Order-service     && mvn clean verify && cd ..
-cd Inventory-service && mvn clean verify && cd ..
-cd Payment-service   && mvn clean verify && cd ..
+mvn -B verify
+```
+
+To build one service on its own, install the starter first:
+
+```bash
+mvn -B -f platform-commons-starter/pom.xml install -DskipTests
+cd Order-service && mvn -B verify
+```
+
+Compose images copy each service's `target/*.jar`, so package before
+`docker compose up --build`:
+
+```bash
+mvn -B package -DskipTests
+docker compose up --build -d
 ```
 
 ## Trying the flow
@@ -125,6 +142,7 @@ directly on each service's own port.
 ### Health (all services)
 - `GET /actuator/health/liveness` — process is up; does not touch the database
 - `GET /actuator/health/readiness` — ready to serve; includes the database
+- `GET /actuator/prometheus` — scrape endpoint (Micrometer Prometheus registry)
 
 ## Deploying to Kubernetes
 

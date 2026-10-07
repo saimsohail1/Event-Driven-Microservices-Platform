@@ -2,6 +2,8 @@ server:
   port: 8081
 
 spring:
+  application:
+    name: order-service
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/orders}
     username: ${DB_USER:postgres}
@@ -21,12 +23,10 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       # Outbox rows already hold serialized JSON, so the payload ships as-is.
+      # acks=all, idempotence and max.in.flight come from the starter.
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      acks: all
       properties:
-        enable.idempotence: true
-        max.in.flight.requests.per.connection: 5
         request.timeout.ms: 15000
         delivery.timeout.ms: 30000
         max.block.ms: 10000
@@ -45,11 +45,15 @@ app:
     max-attempts: 10
     send-timeout-ms: 15000
 
+platform:
+  metrics:
+    environment: ${PLATFORM_ENV:local}
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       probes:

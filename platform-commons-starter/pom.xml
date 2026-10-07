@@ -24,7 +24,28 @@
         <!-- Not managed by the Spring Boot BOM, so these have to be pinned here. -->
         <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
         <resilience4j.version>2.2.0</resilience4j.version>
+        <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
+        <dependency-check-maven.version>13.0.0</dependency-check-maven.version>
+        <!-- NVD download is minutes on a cold cache; local `mvn verify` stays
+             fast. CI turns this on with -Ddependency-check.skip=false. -->
+        <dependency-check.skip>true</dependency-check.skip>
     </properties>
+
+    <url>https://github.com/saimsohail1/Event-Driven-Microservices-Platform</url>
+
+    <scm>
+        <url>https://github.com/saimsohail1/Event-Driven-Microservices-Platform</url>
+        <connection>scm:git:https://github.com/saimsohail1/Event-Driven-Microservices-Platform.git</connection>
+        <developerConnection>scm:git:https://github.com/saimsohail1/Event-Driven-Microservices-Platform.git</developerConnection>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/saimsohail1/Event-Driven-Microservices-Platform</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <!-- The shared concerns are all web concerns: a servlet filter, a
@@ -104,6 +125,51 @@
                 <configuration>
                     <release>21</release>
                 </configuration>
+            </plugin>
+
+            <!-- Software Bill of Materials next to the jar, so a release can
+                 be scanned without rebuilding. -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>${cyclonedx-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <projectType>library</projectType>
+                    <outputFormat>json</outputFormat>
+                    <outputName>bom</outputName>
+                </configuration>
+            </plugin>
+
+            <!-- Known-CVE scan. Skipped locally; CI enables it. A score of 11
+                 means "report, do not fail" — Boot 3.2.1 will always have
+                 something, and a red build on every CVE is not a release
+                 gate we can honour yet. -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${dependency-check-maven.version}</version>
+                <configuration>
+                    <failBuildOnCVSS>11</failBuildOnCVSS>
+                    <formats>HTML,JSON</formats>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+                    <ossIndexAnalyzerEnabled>false</ossIndexAnalyzerEnabled>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

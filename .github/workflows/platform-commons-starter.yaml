@@ -1,0 +1,85 @@
+name: Platform Commons Starter
+
+on:
+  push:
+    paths:
+      - "platform-commons-starter/**"
+      - ".github/workflows/platform-commons-starter.yaml"
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - "platform-commons-starter/**"
+      - ".github/workflows/platform-commons-starter.yaml"
+
+concurrency:
+  group: platform-commons-starter-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Test and package
+        working-directory: platform-commons-starter
+        run: mvn -B clean verify
+
+      - name: Upload CycloneDX SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-commons-starter-bom
+          path: platform-commons-starter/target/bom.json
+          if-no-files-found: error
+
+      - name: OWASP dependency-check
+        working-directory: platform-commons-starter
+        continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn -B org.owasp:dependency-check-maven:check -Ddependency-check.skip=false
+
+      - name: Upload dependency-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-commons-starter-dependency-check
+          path: platform-commons-starter/target/dependency-check-report.*
+          if-no-files-found: ignore
+
+      - name: Confirm tag matches the POM version
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: platform-commons-starter
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          POM=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          if [ "$TAG" != "$POM" ]; then
+            echo "Tag v$TAG does not match POM version $POM"
+            exit 1
+          fi
+
+      - name: Publish to GitHub Packages
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: platform-commons-starter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mvn -B deploy -DskipTests

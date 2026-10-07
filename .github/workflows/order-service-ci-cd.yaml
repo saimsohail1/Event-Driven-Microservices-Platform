@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "Order-service/**"
+      - "platform-commons-starter/**"
       - "k8s/order-service/**"
       - ".github/workflows/order-service-ci-cd.yaml"
     branches:
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - "Order-service/**"
+      - "platform-commons-starter/**"
       - "k8s/order-service/**"
       - ".github/workflows/order-service-ci-cd.yaml"
 
@@ -42,6 +44,10 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
+
+      - name: Install platform-commons-starter
+        working-directory: platform-commons-starter
+        run: mvn -B install -DskipTests
 
       # Tests are the point of CI; a failure here must stop the deploy.
       - name: Build and test order-service

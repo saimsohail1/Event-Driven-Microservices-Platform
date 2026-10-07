@@ -3,6 +3,7 @@ package org.platform.commons.autoconfigure;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.junit.jupiter.api.Test;
 import org.platform.commons.PlatformProperties;
+import org.platform.commons.kafka.DeadLetterProducer;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.kafka.DefaultKafkaProducerFactoryCustomizer;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
@@ -36,7 +37,10 @@ class PlatformKafkaAutoConfigurationTest {
         runner.run(context -> {
             assertThat(context).hasSingleBean(DefaultKafkaProducerFactoryCustomizer.class);
             assertThat(context).hasSingleBean(DefaultErrorHandler.class);
-            assertThat(context).hasBean("deadLetterKafkaTemplate");
+            assertThat(context).hasSingleBean(DeadLetterProducer.class);
+            // Boot's producer template must still be there: a KafkaTemplate
+            // bean of our own would make @ConditionalOnMissingBean skip it.
+            assertThat(context).hasBean("kafkaTemplate");
         });
     }
 
@@ -124,10 +128,10 @@ class PlatformKafkaAutoConfigurationTest {
     }
 
     @Test
-    void backsOffWhenTheServiceDefinesItsOwnDeadLetterTemplate() {
-        runner.withUserConfiguration(CustomDeadLetterTemplateConfiguration.class).run(context ->
-                assertThat(context.getBean("deadLetterKafkaTemplate"))
-                        .isSameAs(context.getBean(CustomDeadLetterTemplateConfiguration.class).template));
+    void backsOffWhenTheServiceDefinesItsOwnDeadLetterProducer() {
+        runner.withUserConfiguration(CustomDeadLetterProducerConfiguration.class).run(context ->
+                assertThat(context.getBean(DeadLetterProducer.class))
+                        .isSameAs(context.getBean("serviceOwnedDeadLetter")));
     }
 
     @Test
@@ -135,7 +139,7 @@ class PlatformKafkaAutoConfigurationTest {
         runner.withPropertyValues("platform.kafka.enabled=false").run(context -> {
             assertThat(context).doesNotHaveBean(DefaultKafkaProducerFactoryCustomizer.class);
             assertThat(context).doesNotHaveBean(DefaultErrorHandler.class);
-            assertThat(context).doesNotHaveBean("deadLetterKafkaTemplate");
+            assertThat(context).doesNotHaveBean(DeadLetterProducer.class);
         });
     }
 
@@ -156,14 +160,11 @@ class PlatformKafkaAutoConfigurationTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    static class CustomDeadLetterTemplateConfiguration {
-
-        private final KafkaTemplate<byte[], byte[]> template =
-                new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(Map.of()));
+    static class CustomDeadLetterProducerConfiguration {
 
         @Bean
-        KafkaTemplate<byte[], byte[]> deadLetterKafkaTemplate() {
-            return template;
+        DeadLetterProducer serviceOwnedDeadLetter() {
+            return new DeadLetterProducer(new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(Map.of())));
         }
     }
 }

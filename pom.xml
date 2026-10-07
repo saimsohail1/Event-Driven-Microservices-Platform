@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Reactor only: each module keeps spring-boot-starter-parent as its
+         own parent. Listing the starter first so a root `mvn verify`
+         installs it before the services try to resolve it. -->
+    <groupId>org.example</groupId>
+    <artifactId>event-driven-microservices-platform</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>event-driven-microservices-platform</name>
+
+    <modules>
+        <module>platform-commons-starter</module>
+        <module>Order-service</module>
+        <module>Inventory-service</module>
+        <module>Payment-service</module>
+    </modules>
+
+</project>

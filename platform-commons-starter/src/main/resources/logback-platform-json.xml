@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  JSON log output, shipped by the starter but opt-in: a library cannot override
+  a service's own logback config, so a service activates this with
+
+      logging:
+        config: classpath:logback-platform-json.xml
+
+  MDC entries are included by default, which is how correlationId reaches the
+  log aggregator as a queryable field rather than buried in a message string.
+-->
+<configuration>
+
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+            <timeZone>UTC</timeZone>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON"/>
+    </root>
+
+</configuration>

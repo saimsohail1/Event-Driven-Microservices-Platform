@@ -1,0 +1,3 @@
+org.platform.commons.autoconfigure.PlatformCorrelationAutoConfiguration
+org.platform.commons.autoconfigure.PlatformErrorHandlingAutoConfiguration
+org.platform.commons.autoconfigure.PlatformRestClientAutoConfiguration

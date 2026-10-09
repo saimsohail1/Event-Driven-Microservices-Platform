@@ -17,6 +17,7 @@ public class PlatformProperties {
     private final ErrorHandling errorHandling = new ErrorHandling();
     private final Metrics metrics = new Metrics();
     private final Kafka kafka = new Kafka();
+    private final RateLimit rateLimit = new RateLimit();
 
     public Correlation getCorrelation() {
         return correlation;
@@ -36,6 +37,10 @@ public class PlatformProperties {
 
     public Kafka getKafka() {
         return kafka;
+    }
+
+    public RateLimit getRateLimit() {
+        return rateLimit;
     }
 
     public static class Correlation {
@@ -301,6 +306,56 @@ public class PlatformProperties {
 
         public void setTimeout(Duration timeout) {
             this.timeout = timeout;
+        }
+    }
+
+    public static class RateLimit {
+
+        /** Whether to install the inbound rate-limit filter. */
+        private boolean enabled = true;
+
+        /** Requests allowed from one client during {@link #window}. */
+        private int requests = 100;
+
+        /** How long a client's budget lasts before it refills. */
+        private Duration window = Duration.ofMinutes(1);
+
+        /**
+         * How many distinct client keys to remember. Extra clients share one
+         * overflow bucket so a scan cannot grow the map without bound.
+         */
+        private int maxKeys = 10_000;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public int getRequests() {
+            return requests;
+        }
+
+        public void setRequests(int requests) {
+            this.requests = requests;
+        }
+
+        public Duration getWindow() {
+            return window;
+        }
+
+        public void setWindow(Duration window) {
+            this.window = window;
+        }
+
+        public int getMaxKeys() {
+            return maxKeys;
+        }
+
+        public void setMaxKeys(int maxKeys) {
+            this.maxKeys = maxKeys;
         }
     }
 

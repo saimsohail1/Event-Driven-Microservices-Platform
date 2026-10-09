@@ -1,5 +1,6 @@
 org.platform.commons.autoconfigure.PlatformCorrelationAutoConfiguration
 org.platform.commons.autoconfigure.PlatformErrorHandlingAutoConfiguration
+org.platform.commons.autoconfigure.PlatformRateLimitAutoConfiguration
 org.platform.commons.autoconfigure.PlatformRestClientAutoConfiguration
 org.platform.commons.autoconfigure.PlatformMetricsAutoConfiguration
 org.platform.commons.autoconfigure.PlatformKafkaAutoConfiguration

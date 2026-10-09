@@ -2,7 +2,7 @@
 
 Shared Spring Boot auto-configuration for the platform services. Add one
 dependency and you get the conventions every service is expected to follow:
-correlation IDs, a single error shape, a timed and retried `RestClient`,
+correlation IDs, inbound rate limiting, a single error shape, a timed and retried `RestClient`,
 Micrometer common tags plus Prometheus, an idempotent Kafka producer, dead-letter
 consumer handling, and a Kafka health indicator.
 
@@ -13,6 +13,7 @@ Coordinates: `org.example:platform-commons-starter:1.0.0`
 | Concern | What you get | How to turn it off |
 | --- | --- | --- |
 | Correlation ID | `X-Correlation-Id` inbound, echoed outbound, copied onto outgoing `RestClient` calls, published to MDC as `correlationId` | `platform.correlation.enabled=false` |
+| Rate limit | 100 requests / minute / client IP; 429 + `Retry-After` + `ApiError`. `/actuator/**` is not counted | `platform.rate-limit.enabled=false` |
 | Error body | `PlatformExceptionHandler` returns [`ApiError`](src/main/java/org/platform/commons/web/ApiError.java) for validation failures and unexpected 500s | `platform.error-handling.enabled=false` |
 | HTTP client | A `RestClient` bean with connect/read timeouts | Define your own `RestClient` |
 | Client retry | Resilience4j: 3 attempts, 200 ms apart, `IOException` and 5xx only; POST/PATCH are not retried | `platform.rest-client.retry.enabled=false` |

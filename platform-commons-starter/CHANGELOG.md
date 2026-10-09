@@ -4,6 +4,14 @@ All notable changes to `platform-commons-starter` are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and version numbers follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Inbound per-client rate limit (`platform.rate-limit.*`): 100 requests per
+  minute by default, 429 with `Retry-After` when exceeded. Actuator paths
+  are excluded so probes do not consume the budget.
+
 ## [1.0.0] — 2026-10-07
 
 First public release. Published to GitHub Packages on tag `v1.0.0`.
